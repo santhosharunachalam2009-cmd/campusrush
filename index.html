@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Rush: The Last Bus</title>
+    <!-- Tailwind CSS for UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-900 text-white font-sans select-none overflow-hidden h-screen flex flex-col items-center justify-center">
+
+    <!-- MAIN GAME CONTAINER -->
+    <div id="game-container" class="relative w-full max-w-4xl h-[600px] bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border-4 border-slate-700 flex flex-col">
+        
+        <!-- HEADER HUD (Visible during gameplay) -->
+        <div id="hud" class="hidden bg-slate-900/90 px-6 py-3 border-b border-slate-700 flex justify-between items-center text-sm font-bold z-10">
+            <div class="flex items-center gap-4">
+                <span id="hud-level" class="bg-indigo-600 px-3 py-1 rounded-full text-indigo-100">Level 1/12</span>
+                <span class="flex items-center gap-1 text-amber-400">🪙 <span id="hud-coins">0</span></span>
+                <span class="flex items-center gap-1 text-emerald-400">⭐ <span id="hud-score">0</span></span>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400">ENERGY</span>
+                    <div class="w-24 h-3 bg-slate-700 rounded-full overflow-hidden border border-slate-600">
+                        <div id="hud-energy" class="h-full bg-cyan-400 transition-all duration-150" style="width: 100%"></div>
+                    </div>
+                </div>
+                <div id="hud-timer" class="text-xl font-mono text-cyan-300 font-extrabold bg-slate-800 px-3 py-0.5 rounded border border-slate-700">30s</div>
+                <button id="pause-btn" class="bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-xs transition">⏸ Pause</button>
+            </div>
+        </div>
+
+        <!-- CANVAS VIEWPORT -->
+        <div class="relative flex-1 bg-slate-950 flex items-center justify-center overflow-hidden">
+            <canvas id="gameCanvas" width="800" height="500" class="w-full h-full object-contain"></canvas>
+
+            <!-- ================= OVERLAYS ================= -->
+
+            <!-- 1. MAIN MENU SCREEN -->
+            <div id="screen-main" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center z-20 p-6 text-center">
+                <h1 class="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-indigo-400 to-cyan-400 mb-2 drop-shadow-lg">CAMPUS RUSH</h1>
+                <p class="text-slate-400 text-lg mb-8">The Last Bus home is leaving! Navigate 12 levels of college chaos.</p>
+                <div class="flex gap-4">
+                    <button id="btn-start-game" class="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold px-8 py-4 rounded-xl shadow-lg transform hover:-translate-y-0.5 transition text-lg">Start Game</button>
+                    <button id="btn-instructions" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-6 py-4 rounded-xl border border-slate-700 transition">Instructions</button>
+                </div>
+            </div>
+
+            <!-- 2. LEVEL SELECT SCREEN -->
+            <div id="screen-levels" class="absolute inset-0 bg-slate-900/95 hidden flex flex-col items-center justify-center z-20 p-6">
+                <h2 class="text-3xl font-extrabold text-indigo-300 mb-2">Select Level</h2>
+                <p class="text-slate-400 text-sm mb-6">Choose an unlocked campus sector</p>
+                <div id="level-grid" class="grid grid-cols-4 gap-3 max-w-xl w-full mb-6">
+                    <!-- Dynamically populated level buttons -->
+                </div>
+                <button id="btn-back-to-main" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-6 py-2 rounded-lg font-bold text-sm transition">Back to Menu</button>
+            </div>
+
+            <!-- 3. INSTRUCTIONS SCREEN -->
+            <div id="screen-instructions" class="absolute inset-0 bg-slate-900/95 hidden flex flex-col items-center justify-center z-20 p-6">
+                <div class="max-w-md bg-slate-800 p-6 rounded-2xl border border-slate-700 text-left text-sm space-y-3 mb-6">
+                    <h3 class="text-xl font-bold text-cyan-400 mb-2 text-center">How to Play</h3>
+                    <p><b>Movement:</b> Use <span class="text-amber-300 font-mono">WASD</span> or <span class="text-amber-300 font-mono">Arrow Keys</span>.</p>
+                    <p><b>Goal:</b> Reach the blinking <span class="text-indigo-400 font-bold">Bus Stop</span> before the countdown expires.</p>
+                    <p>🪙 <b>Coins:</b> Boost score & total points.</p>
+                    <p>⚡ <b>Energy Drink:</b> Temporary speed surge.</p>
+                    <p>⏰ <b>Alarm Clock:</b> Adds +5 seconds.</p>
+                    <p>⚠️ <b>Mud / Spills:</b> Slows you down! Avoid them or take the risky shortcut.</p>
+                </div>
+                <button id="btn-close-instructions" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-3 rounded-xl transition">Got it!</button>
+            </div>
+
+            <!-- 4. PAUSE SCREEN -->
+            <div id="screen-pause" class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm hidden flex flex-col items-center justify-center z-20">
+                <h2 class="text-3xl font-extrabold text-white mb-6">Game Paused</h2>
+                <div class="flex flex-col gap-3 w-48">
+                    <button id="btn-resume" class="bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold transition">Resume</button>
+                    <button id="btn-restart-level" class="bg-slate-800 hover:bg-slate-700 py-3 rounded-xl font-bold border border-slate-700 transition">Restart Level</button>
+                    <button id="btn-quit-to-menu" class="bg-rose-900/50 hover:bg-rose-900 py-3 rounded-xl font-bold text-rose-200 transition">Quit to Menu</button>
+                </div>
+            </div>
+
+            <!-- 5. LEVEL COMPLETE SCREEN -->
+            <div id="screen-level-complete" class="absolute inset-0 bg-slate-900/95 hidden flex flex-col items-center justify-center z-20 p-6 text-center animate-fade-in">
+                <h2 class="text-4xl font-extrabold text-emerald-400 mb-2">Level Complete!</h2>
+                <p id="lc-msg" class="text-slate-300 mb-4">You caught the shuttle just in time!</p>
+                <div id="lc-stars" class="text-3xl mb-4 tracking-widest">⭐⭐⭐</div>
+                <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 w-64 text-sm space-y-2 mb-6">
+                    <div class="flex justify-between"><span>Coins Collected:</span> <span id="lc-coins" class="font-bold text-amber-400">0</span></div>
+                    <div class="flex justify-between"><span>Time Left Bonus:</span> <span id="lc-time" class="font-bold text-cyan-400">0 pts</span></div>
+                    <div class="flex justify-between border-t border-slate-700 pt-2 font-bold text-base"><span>Total Score:</span> <span id="lc-score" class="text-emerald-400">0</span></div>
+                </div>
+                <div class="flex gap-3">
+                    <button id="btn-next-level" class="bg-emerald-600 hover:bg-emerald-500 px-6 py-3 rounded-xl font-bold shadow transition">Next Level ➔</button>
+                    <button id="btn-level-select" class="bg-slate-800 hover:bg-slate-700 px-6 py-3 rounded-xl font-bold border border-slate-700 transition">Level Select</button>
+                </div>
+            </div>
+
+            <!-- 6. GAME OVER SCREEN -->
+            <div id="screen-game-over" class="absolute inset-0 bg-slate-900/95 hidden flex flex-col items-center justify-center z-20 p-6 text-center">
+                <h2 class="text-4xl font-extrabold text-rose-500 mb-2">Missed the Bus!</h2>
+                <p class="text-slate-400 mb-6">The bus drove away without you. Better luck next time!</p>
+                <div class="flex gap-4">
+                    <button id="btn-try-again" class="bg-indigo-600 hover:bg-indigo-500 px-6 py-3 rounded-xl font-bold transition">Try Again</button>
+                    <button id="btn-gameover-menu" class="bg-slate-800 hover:bg-slate-700 px-6 py-3 rounded-xl font-bold border border-slate-700 transition">Main Menu</button>
+                </div>
+            </div>
+
+            <!-- 7. FINAL SCORE / CAMPAIGN COMPLETE SCREEN -->
+            <div id="screen-campaign-complete" class="absolute inset-0 bg-slate-900/95 hidden flex flex-col items-center justify-center z-20 p-6 text-center">
+                <h2 class="text-4xl font-extrabold text-amber-400 mb-2">Campus Hero! 🎓</h2>
+                <p class="text-slate-300 mb-6">You successfully conquered all 12 levels and caught every bus!</p>
+                <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 w-72 text-sm space-y-3 mb-6">
+                    <div class="flex justify-between items-center text-lg"><span>Final Rank:</span> <span id="cc-rank" class="font-extrabold text-amber-300 text-2xl">S+</span></div>
+                    <div class="flex justify-between"><span>Total Score:</span> <span id="cc-score" class="font-bold text-emerald-400">0</span></div>
+                    <div class="flex justify-between"><span>Total Coins:</span> <span id="cc-coins" class="font-bold text-amber-400">0</span></div>
+                </div>
+                <button id="btn-campaign-menu" class="bg-indigo-600 hover:bg-indigo-500 px-8 py-3 rounded-xl font-bold transition">Main Menu</button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="audio.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
